@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import Alerta, Parada
+
+admin.site.register(Alerta)
+admin.site.register(Parada)

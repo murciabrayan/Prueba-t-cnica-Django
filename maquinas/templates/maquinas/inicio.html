@@ -2,117 +2,202 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Alertas y paradas</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
-        .success { color: green; }
-        .error { color: red; }
-        .warning { color: orange; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Alertas y paradas de máquina</h1>
+<body class="bg-gray-100 text-gray-800">
 
-    <p>
-        Usuario: <strong>{{ user.username }}</strong>
-        {% if es_operario %}(Operario){% endif %}
-        {% if es_supervisor %}(Supervisor){% endif %}
-        {% if es_jefe %}(Jefe){% endif %}
-    </p>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Cerrar sesión</button>
-    </form>
-
-    {% for mensaje in messages %}
-        <p class="{{ mensaje.tags }}">{{ mensaje }}</p>
-    {% endfor %}
-
-    {% if es_operario %}
-        <h2>Nueva alerta</h2>
-        <form method="post" action="{% url 'crear_alerta' %}">
-            {% csrf_token %}
-            {{ alerta_form.as_p }}
-            <button type="submit">Registrar alerta</button>
-        </form>
-    {% endif %}
-
-    <h2>Alertas</h2>
-    <table>
-        <tr>
-            <th>#</th><th>Máquina</th><th>Descripción</th><th>Usuario</th><th>Fecha</th>
-            {% if es_supervisor %}<th>Editar</th>{% endif %}
-        </tr>
-        {% for alerta in alertas %}
-        <tr>
-            <td>{{ alerta.id }}</td>
-            <td>{{ alerta.maquina }}</td>
-            <td>{{ alerta.descripcion }}</td>
-            <td>{{ alerta.usuario.username }}</td>
-            <td>{{ alerta.fecha|date:"d/m/Y H:i" }}</td>
-            {% if es_supervisor %}
-            <td>
-                <form method="post" action="{% url 'editar_alerta' alerta.id %}">
+    <!-- Barra superior -->
+    <nav class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h1 class="text-lg font-semibold">Alertas y paradas de máquina</h1>
+            <div class="flex items-center gap-3 text-sm">
+                <span>
+                    {{ user.username }}
+                    <span class="text-gray-500">
+                        {% if es_operario %}· Operario{% endif %}
+                        {% if es_supervisor %}· Supervisor{% endif %}
+                        {% if es_jefe %}· Jefe{% endif %}
+                    </span>
+                </span>
+                <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
-                    <input name="maquina" value="{{ alerta.maquina }}">
-                    <input name="descripcion" value="{{ alerta.descripcion }}">
-                    <button type="submit">Guardar</button>
+                    <button type="submit" class="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700">Cerrar sesión</button>
                 </form>
-            </td>
-            {% endif %}
-        </tr>
-        {% empty %}
-        <tr><td colspan="6">No hay alertas.</td></tr>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Mensajes -->
+        {% for mensaje in messages %}
+            <div class="rounded px-4 py-2 text-sm
+                {% if mensaje.tags == 'success' %}bg-green-100 text-green-800
+                {% elif mensaje.tags == 'error' %}bg-red-100 text-red-800
+                {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                {{ mensaje }}
+            </div>
         {% endfor %}
-    </table>
 
-    {% if es_supervisor %}
-        <h2>Nueva parada</h2>
-        <form method="post" action="{% url 'crear_parada' %}">
-            {% csrf_token %}
-            {{ parada_form.as_p }}
-            <button type="submit">Registrar parada</button>
-        </form>
-    {% endif %}
+        <!-- Formularios -->
+        <div class="grid gap-6 md:grid-cols-2">
 
-    {% if es_supervisor or es_jefe %}
-        <h2>Paradas</h2>
-        <table>
-            <tr>
-                <th>#</th><th>Máquina</th><th>Inicio</th><th>Fin</th><th>Duración</th>
-                <th>Motivo</th><th>Registró</th><th>Estado</th>
-            </tr>
-            {% for parada in paradas %}
-            <tr>
-                <td>{{ parada.id }}</td>
-                <td>{{ parada.maquina }}</td>
-                <td>{{ parada.inicio|date:"d/m/Y H:i" }}</td>
-                <td>{{ parada.fin|date:"d/m/Y H:i" }}</td>
-                <td>{{ parada.duracion_minutos }} min</td>
-                <td>{{ parada.motivo }}</td>
-                <td>{{ parada.usuario.username }}</td>
-                <td>
-                    {% if parada.cancelada_en %}
-                        Cancelada por {{ parada.cancelada_por.username }}
-                        el {{ parada.cancelada_en|date:"d/m/Y H:i" }}.
-                        Motivo: {{ parada.motivo_cancelacion }}
-                    {% elif es_jefe %}
-                        <form method="post" action="{% url 'cancelar_parada' parada.id %}">
-                            {% csrf_token %}
-                            <input name="motivo_cancelacion" placeholder="Motivo de cancelación">
-                            <button type="submit">Cancelar parada</button>
-                        </form>
-                    {% else %}
-                        Activa
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="8">No hay paradas.</td></tr>
-            {% endfor %}
-        </table>
-    {% endif %}
+            {% if es_operario %}
+            <div class="bg-white rounded border p-5">
+                <h2 class="font-semibold mb-4">Nueva alerta</h2>
+                <form method="post" action="{% url 'crear_alerta' %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Máquina</label>
+                        <input name="maquina" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Descripción</label>
+                        <textarea name="descripcion" rows="3" class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Registrar alerta</button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% if es_supervisor %}
+            <div class="bg-white rounded border p-5">
+                <h2 class="font-semibold mb-4">Nueva parada</h2>
+                <form method="post" action="{% url 'crear_parada' %}" class="space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Máquina</label>
+                        <input name="maquina" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Inicio</label>
+                            <input type="datetime-local" name="inicio" class="w-full border rounded px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Fin</label>
+                            <input type="datetime-local" name="fin" class="w-full border rounded px-3 py-2">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Motivo</label>
+                        <textarea name="motivo" rows="2" class="w-full border rounded px-3 py-2"></textarea>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white rounded px-4 py-2 hover:bg-blue-700">Registrar parada</button>
+                </form>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Tabla de alertas -->
+        <div class="bg-white rounded border">
+            <h2 class="font-semibold px-5 py-3 border-b">Alertas</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-left text-gray-600">
+                        <tr>
+                            <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">Máquina</th>
+                            <th class="px-4 py-2">Descripción</th>
+                            <th class="px-4 py-2">Usuario</th>
+                            <th class="px-4 py-2">Fecha</th>
+                            {% if es_supervisor %}<th class="px-4 py-2"></th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alerta in alertas %}
+                        <tr class="border-t align-top">
+                            <td class="px-4 py-2">{{ alerta.id }}</td>
+                            <td class="px-4 py-2">{{ alerta.maquina }}</td>
+                            <td class="px-4 py-2">{{ alerta.descripcion }}</td>
+                            <td class="px-4 py-2">{{ alerta.usuario.username }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ alerta.fecha|date:"d/m/Y H:i" }}</td>
+                            {% if es_supervisor %}
+                            <td class="px-4 py-2">
+                                <details>
+                                    <summary class="cursor-pointer text-blue-600 hover:underline list-none">Editar</summary>
+                                    <form method="post" action="{% url 'editar_alerta' alerta.id %}" class="mt-2 flex flex-col gap-2 min-w-[220px]">
+                                        {% csrf_token %}
+                                        <label class="text-xs text-gray-500">Máquina</label>
+                                        <input name="maquina" value="{{ alerta.maquina }}" class="border rounded px-2 py-1">
+                                        <label class="text-xs text-gray-500">Descripción</label>
+                                        <textarea name="descripcion" rows="3" class="border rounded px-2 py-1">{{ alerta.descripcion }}</textarea>
+                                        <button type="submit" class="bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700">Guardar cambios</button>
+                                    </form>
+                                </details>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="px-4 py-4 text-center text-gray-500">No hay alertas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabla de paradas -->
+        {% if es_supervisor or es_jefe %}
+        <div class="bg-white rounded border">
+            <h2 class="font-semibold px-5 py-3 border-b">Paradas</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-left text-gray-600">
+                        <tr>
+                            <th class="px-4 py-2">#</th>
+                            <th class="px-4 py-2">Máquina</th>
+                            <th class="px-4 py-2">Inicio</th>
+                            <th class="px-4 py-2">Fin</th>
+                            <th class="px-4 py-2">Duración</th>
+                            <th class="px-4 py-2">Motivo</th>
+                            <th class="px-4 py-2">Registró</th>
+                            <th class="px-4 py-2">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for parada in paradas %}
+                        <tr class="border-t align-top">
+                            <td class="px-4 py-2">{{ parada.id }}</td>
+                            <td class="px-4 py-2">{{ parada.maquina }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ parada.inicio|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ parada.fin|date:"d/m/Y H:i" }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ parada.duracion_minutos }} min</td>
+                            <td class="px-4 py-2">{{ parada.motivo }}</td>
+                            <td class="px-4 py-2">{{ parada.usuario.username }}</td>
+                            <td class="px-4 py-2">
+                                {% if parada.cancelada_en %}
+                                    <span class="inline-block bg-red-100 text-red-700 text-xs rounded px-2 py-0.5">Cancelada</span>
+                                    <div class="text-gray-500 text-xs mt-1">
+                                        Por {{ parada.cancelada_por.username }} el {{ parada.cancelada_en|date:"d/m/Y H:i" }}<br>
+                                        Motivo: {{ parada.motivo_cancelacion }}
+                                    </div>
+                                {% else %}
+                                    <span class="inline-block bg-green-100 text-green-700 text-xs rounded px-2 py-0.5">Activa</span>
+                                    {% if es_jefe %}
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-red-600 hover:underline list-none text-sm">Cancelar parada</summary>
+                                        <form method="post" action="{% url 'cancelar_parada' parada.id %}" class="mt-2 flex flex-col gap-2 min-w-[200px]">
+                                            {% csrf_token %}
+                                            <textarea name="motivo_cancelacion" rows="2" placeholder="¿Por qué se cancela?" class="border rounded px-2 py-1"></textarea>
+                                            <button type="submit" class="bg-red-600 text-white rounded px-3 py-1 hover:bg-red-700">Confirmar cancelación</button>
+                                        </form>
+                                    </details>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="px-4 py-4 text-center text-gray-500">No hay paradas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </main>
 </body>
 </html>

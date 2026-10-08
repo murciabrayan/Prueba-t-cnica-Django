@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Alertas y paradas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Alertas y paradas de máquina</h1>
+
+    <p>
+        Usuario: <strong>{{ user.username }}</strong>
+        {% if es_operario %}(Operario){% endif %}
+        {% if es_supervisor %}(Supervisor){% endif %}
+        {% if es_jefe %}(Jefe){% endif %}
+    </p>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Cerrar sesión</button>
+    </form>
+
+    {% for mensaje in messages %}
+        <p class="{{ mensaje.tags }}">{{ mensaje }}</p>
+    {% endfor %}
+
+    {% if es_operario %}
+        <h2>Nueva alerta</h2>
+        <form method="post" action="{% url 'crear_alerta' %}">
+            {% csrf_token %}
+            {{ alerta_form.as_p }}
+            <button type="submit">Registrar alerta</button>
+        </form>
+    {% endif %}
+
+    <h2>Alertas</h2>
+    <table>
+        <tr>
+            <th>#</th><th>Máquina</th><th>Descripción</th><th>Usuario</th><th>Fecha</th>
+            {% if es_supervisor %}<th>Editar</th>{% endif %}
+        </tr>
+        {% for alerta in alertas %}
+        <tr>
+            <td>{{ alerta.id }}</td>
+            <td>{{ alerta.maquina }}</td>
+            <td>{{ alerta.descripcion }}</td>
+            <td>{{ alerta.usuario.username }}</td>
+            <td>{{ alerta.fecha|date:"d/m/Y H:i" }}</td>
+            {% if es_supervisor %}
+            <td>
+                <form method="post" action="{% url 'editar_alerta' alerta.id %}">
+                    {% csrf_token %}
+                    <input name="maquina" value="{{ alerta.maquina }}">
+                    <input name="descripcion" value="{{ alerta.descripcion }}">
+                    <button type="submit">Guardar</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No hay alertas.</td></tr>
+        {% endfor %}
+    </table>
+
+    {% if es_supervisor %}
+        <h2>Nueva parada</h2>
+        <form method="post" action="{% url 'crear_parada' %}">
+            {% csrf_token %}
+            {{ parada_form.as_p }}
+            <button type="submit">Registrar parada</button>
+        </form>
+    {% endif %}
+
+    {% if es_supervisor or es_jefe %}
+        <h2>Paradas</h2>
+        <table>
+            <tr>
+                <th>#</th><th>Máquina</th><th>Inicio</th><th>Fin</th><th>Duración</th>
+                <th>Motivo</th><th>Registró</th><th>Estado</th>
+            </tr>
+            {% for parada in paradas %}
+            <tr>
+                <td>{{ parada.id }}</td>
+                <td>{{ parada.maquina }}</td>
+                <td>{{ parada.inicio|date:"d/m/Y H:i" }}</td>
+                <td>{{ parada.fin|date:"d/m/Y H:i" }}</td>
+                <td>{{ parada.duracion_minutos }} min</td>
+                <td>{{ parada.motivo }}</td>
+                <td>{{ parada.usuario.username }}</td>
+                <td>
+                    {% if parada.cancelada_en %}
+                        Cancelada por {{ parada.cancelada_por.username }}
+                        el {{ parada.cancelada_en|date:"d/m/Y H:i" }}.
+                        Motivo: {{ parada.motivo_cancelacion }}
+                    {% elif es_jefe %}
+                        <form method="post" action="{% url 'cancelar_parada' parada.id %}">
+                            {% csrf_token %}
+                            <input name="motivo_cancelacion" placeholder="Motivo de cancelación">
+                            <button type="submit">Cancelar parada</button>
+                        </form>
+                    {% else %}
+                        Activa
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8">No hay paradas.</td></tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+</body>
+</html>
